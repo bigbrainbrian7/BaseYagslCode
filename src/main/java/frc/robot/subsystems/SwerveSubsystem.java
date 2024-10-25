@@ -23,8 +23,9 @@ public class SwerveSubsystem extends SubsystemBase {
 
   /** Creates a new SwerveSubsystem. */
   public SwerveSubsystem() {
-    double maximumSpeed = Units.feetToMeters(4.5);
-    File swerveJsonDirectory = new File(Filesystem.getDeployDirectory(),"swerve");
+    double maximumSpeed = 1.0;
+    // File swerveJsonDirectory = new File(Filesystem.getDeployDirectory(),"swerve");
+    File swerveJsonDirectory = new File(Filesystem.getDeployDirectory(),"tabiSwerve");
     try
     {
       swerveDrive = new SwerveParser(swerveJsonDirectory).createSwerveDrive(maximumSpeed);
@@ -36,6 +37,7 @@ public class SwerveSubsystem extends SubsystemBase {
     }  
 
     SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
+    // swerveDrive.setChassisDiscretization(true, 0.02);
   }
 
   @Override
