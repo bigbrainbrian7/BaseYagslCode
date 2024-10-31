@@ -5,25 +5,35 @@
 package frc.robot.subsystems;
 
 import java.io.File;
+import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
+import com.pathplanner.lib.util.PIDConstants;
+import com.pathplanner.lib.util.ReplanningConfig;
+
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import swervelib.SwerveDrive;
+import swervelib.parser.SwerveDriveConfiguration;
 import swervelib.parser.SwerveParser;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 
 public class SwerveSubsystem extends SubsystemBase {
+  double maximumSpeed = 3.5;
+
   SwerveDrive swerveDrive;
 
   /** Creates a new SwerveSubsystem. */
   public SwerveSubsystem() {
-    double maximumSpeed = 1.0;
     // File swerveJsonDirectory = new File(Filesystem.getDeployDirectory(),"swerve");
     File swerveJsonDirectory = new File(Filesystem.getDeployDirectory(),"tabiSwerve");
     try
@@ -38,6 +48,39 @@ public class SwerveSubsystem extends SubsystemBase {
 
     SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
     // swerveDrive.setChassisDiscretization(true, 0.02);
+    setupPathplanner();
+  }
+
+  public void setupPathplanner(){
+    HolonomicPathFollowerConfig holonomicPathFollowerConfig = new HolonomicPathFollowerConfig(
+            new PIDConstants(2.5*0), 
+            new PIDConstants(0.5*0), 
+            maximumSpeed, 
+            swerveDrive.swerveDriveConfiguration.getDriveBaseRadiusMeters(),
+            new ReplanningConfig(false, false));
+
+        BooleanSupplier shouldFlipPath = () -> {
+            // Boolean supplier that controls when the path will be mirrored for the red alliance
+            // This will flip the path being followe
+            // d to the red side of the field.
+            // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
+
+            var alliance = DriverStation.getAlliance();
+            if (alliance.isPresent()) {
+                return alliance.get() == DriverStation.Alliance.Red;
+            }
+            return false;
+        };
+
+        AutoBuilder.configureHolonomic(
+            this::getPose,
+            this::resetOdometry,
+            this::getChassisSpeeds, 
+            this::setChassisSpeeds, 
+            holonomicPathFollowerConfig, 
+            shouldFlipPath, 
+            this
+        );
   }
 
   @Override
@@ -69,7 +112,22 @@ public class SwerveSubsystem extends SubsystemBase {
     return swerveDrive.getGyro().getRotation3d().toRotation2d();
   }
 
-  // public void resetHeading(){
-  //   swerveDrive.getGyro().
-  // }
+  public Pose2d getPose(){
+    return swerveDrive.getPose();
+  }
+
+  public void resetOdometry(Pose2d initialHolonomicPose)
+  {
+    swerveDrive.resetOdometry(initialHolonomicPose);
+  }
+
+  public ChassisSpeeds getChassisSpeeds()
+  {
+    return swerveDrive.getRobotVelocity();
+  }
+
+  public void setChassisSpeeds(ChassisSpeeds chassisSpeeds)
+  {
+    swerveDrive.setChassisSpeeds(chassisSpeeds);
+  }
 }
